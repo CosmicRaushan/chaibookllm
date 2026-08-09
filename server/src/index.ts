@@ -7,8 +7,8 @@ import { registerRoutes } from "./routes/index.ts";
 import { errorHandler } from "./middleware/error-handler.middleware.ts";
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
-const clientUrl = process.env.CLIENT_URL ?? `http://localhost:3001`;
+const PORT = process.env.PORT ?? 8000;
+const clientUrl = process.env.CLIENT_URL ?? `http://localhost:3000`;
 
 app.use(
     cors({
