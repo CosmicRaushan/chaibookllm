@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 import { workSpaceIdParamSchema } from "../validators/workspace.vlaidatores.ts";
 import { getZodFieldErrors } from "../utils/zod-error.ts";
 import { ValidationError } from "../types/app-error.ts";
-import { bulkDeleteSourceSchema, createSourceSchema, listSourceQuerySchema, sourceIdParamsSchema } from "../validators/source.vlaidators.ts";
-import { bulkDeleteSourcesForWorkspace, createTextOrMarkdownSource, deleteSourceForWorkspace, getSourceForWorkspace, listSourceForWorkspace } from "../services/source.services.ts";
+import { bulkDeleteSourceSchema, createSourceSchema, importWebSearchSchema, listSourceQuerySchema, sourceIdParamsSchema, workspaceIdParamsSchema } from "../validators/source.vlaidators.ts";
+import { bulkDeleteSourcesForWorkspace, createTextOrMarkdownSource, deleteSourceForWorkspace, getSourceForWorkspace, importWebsiteSource, listSourceForWorkspace, uploadPdfSource } from "../services/source.services.ts";
 
 
 function parseWorkspaceId(params: Request["params"]){
@@ -99,3 +99,34 @@ export async function deleteSources(req: Request, res: Response) {
     );
     res.status(204).send();
 };
+
+
+export async function uploadPdf(req: Request, res: Response){
+    const {workSpaceId} = workSpaceIdParamSchema.parse(req.params);
+
+    if(!req.file){
+        throw new ValidationError("Pdf file is required")
+    };
+    
+    const title = typeof req.body.title === "string" ? req.body.title : undefined;
+
+    const source = await uploadPdfSource(
+        workSpaceId,
+        req.session.user.id,
+        req.file,
+        title,
+    );
+    res.status(201).json(source);
+};
+
+export async function importWebsite(req: Request, res: Response){
+    const {workSpaceId} = workSpaceIdParamSchema.parse(req.params);
+    const input = importWebSearchSchema.parse(req.body)
+    
+    const source = await importWebsiteSource(
+        workSpaceId,
+        req.session.user.id,
+        input,
+    );
+    res.status(201).json(source)
+}

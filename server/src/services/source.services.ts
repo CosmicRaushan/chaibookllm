@@ -1,9 +1,12 @@
 import { userInfo } from "node:os";
-import { deleteSourceRecord, findSourceByIdAndWorkspaceId, findSourcesByworkspaceId, type SourceRecord } from "../repositories/source.repository.ts";
-import type { BulkDeleteSourceInput, CreateSourceInput, ListSourceQuery } from "../validators/source.vlaidators.ts"
+import { createSourceRecord, deleteSourceRecord, findSourceByIdAndWorkspaceId, findSourcesByworkspaceId, type SourceRecord } from "../repositories/source.repository.ts";
+import type { BulkDeleteSourceInput, CreateSourceInput, ImportWebsiteInput, ListSourceQuery } from "../validators/source.vlaidators.ts"
 import { getWorkspaceByIdForUser } from "./workspace.services.ts"
 import { NotFoundError } from "../types/app-error.ts";
 import { removeSourceFromIndex } from "./source-processing.services.ts";
+import { scrapeWebsite } from "../lib/firecrawl.ts";
+import { uploadPdfToCloudinary } from "../lib/cloudinary.ts";
+import { extractPdfFromBuffer } from "../lib/pdf.ts";
 
 
 async function assertWorkspaceAccess(worksapceId: string, userId: string) {
@@ -34,7 +37,21 @@ export async function deleteSourceForWorkspace(
     await getSourceForWorkspace(workspaceId, sourceId, userId);
     await removeSourceFromIndex(workspaceId, sourceId);
     await deleteSourceRecord(sourceId)
+};
+
+
+export async function createAndProcessSource(
+    data: Parameters<typeof createSourceRecord>[0],
+){
+    const source = await createSourceRecord(data);
+
+    // await enqueueSourceProcessing({
+    //     sourceId: source.id,
+    //     workspaceId: source.workspaceId
+    // });
+    return source;
 }
+
 
 export async function listSourceForWorkspace(
     workspaceId: string,
@@ -69,5 +86,69 @@ export async function bulkDeleteSourcesForWorkspace(
     await getWorkspaceByIdForUser(workspaceId, userId);
     for(const sourceId of sourceIds){
         await deleteSourceForWorkspace(workspaceId, sourceId, userId)
-    }
-}
+    };
+};
+
+
+
+export async function importWebsiteSource(
+    workspaceId: string,
+    userId: string,
+    input: ImportWebsiteInput
+){
+    await getWorkspaceByIdForUser(workspaceId, userId);
+    const scraped = await scrapeWebsite(input.url)
+
+    return createAndProcessSource({
+        workspaceId,
+        type: "WEBSITE",
+        title: input.title || scraped.title || input.url,
+        content: scraped.markdown,
+        url: scraped.sourceUrl,
+        status: "PENDING",
+        metadata: {
+            importedFrom: scraped.sourceUrl,
+        },
+    })
+};
+
+
+export async function uploadPdfSource(
+    workspaceId: string,
+    userId: string,
+    file: Express.Multer.File,
+    title?: string,
+) {
+   await getWorkspaceByIdForUser(workspaceId, userId);
+   const upload = await uploadPdfToCloudinary(
+    file.buffer,
+    file.originalname
+   );
+
+   let content: string | null = null;
+   let pageCount: number | undefined;
+
+   try {
+        const extracted =  await extractPdfFromBuffer(file.buffer);
+        content = extracted.text;
+        pageCount = extracted.pageCount;
+   } catch (error) {
+        console.error(error)
+   }
+
+   return createAndProcessSource({
+    workspaceId,
+    type: "PDF",
+    title: title?.trim() || file.originalname.replace(/\.pdf/i, ""),
+    content,
+    status: "PENDING", 
+    metadata: {
+        fileUrl: upload.secureUrl,
+        fileName: upload.originalFileName,
+        fileSize: upload.bytes,
+        publicId: upload.publicId,
+        resourceType: upload.resourceType,
+        pageCount
+    },
+   });
+};

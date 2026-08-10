@@ -16,9 +16,36 @@ export const sourceSelect = {
     updatedAt: true,
 } as const;
 
+
+export type createSourceData = {
+    workspaceId: string,
+    type: SourceRecord["type"],
+    title: string,
+    content?: string | null,
+    url?: string | null,
+    status?: SourceRecord["status"],
+    metadata?: Prisma.InputJsonValue,
+}
+
 export type SourceRecord = Prisma.SourceGetPayload<{
     select: typeof sourceSelect
 }>;
+
+export function createSourceRecord(data: createSourceData) {
+    return prisma.source.create({
+        data: {
+            workspaceId: data.workspaceId,
+            type: data.type,
+            title: data.title,
+            content: data.content ?? null,
+            url: data.url ?? null,
+            status: data.status ?? "PENDING",
+            metadata: data.metadata,
+        },
+        select: sourceSelect
+    })
+}
+
 
 
 export function findSourcesByworkspaceId(
@@ -51,15 +78,15 @@ export function findSourcesByworkspaceId(
 export function findSourceByIdAndWorkspaceId(
     sourceId: string,
     workspaceId: string
-){
+) {
     return prisma.source.findFirst({
-        where: {id: sourceId, workspaceId},
+        where: { id: sourceId, workspaceId },
         select: sourceSelect
     })
 }
 
 export async function deleteSourceRecord(sourceId: string) {
     await prisma.source.delete({
-        where: {id: sourceId}
+        where: { id: sourceId }
     })
 }
