@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 import { workSpaceIdParamSchema } from "../validators/workspace.vlaidatores.ts";
 import { getZodFieldErrors } from "../utils/zod-error.ts";
 import { ValidationError } from "../types/app-error.ts";
-import { bulkDeleteSourceSchema, createSourceSchema, importWebSearchSchema, listSourceQuerySchema, sourceIdParamsSchema, workspaceIdParamsSchema } from "../validators/source.vlaidators.ts";
-import { bulkDeleteSourcesForWorkspace, createTextOrMarkdownSource, deleteSourceForWorkspace, getSourceForWorkspace, importWebsiteSource, listSourceForWorkspace, uploadPdfSource } from "../services/source.services.ts";
+import { bulkDeleteSourceSchema, createSourceSchema, importWebSearchSchema, importYoutubeSchema, listSourceQuerySchema, sourceIdParamsSchema, workspaceIdParamsSchema } from "../validators/source.vlaidators.ts";
+import { bulkDeleteSourcesForWorkspace, createTextOrMarkdownSource, deleteSourceForWorkspace, getSourceForWorkspace, importWebsiteSource, importYoutubeSource, listSourceForWorkspace, uploadPdfSource } from "../services/source.services.ts";
 
 
 function parseWorkspaceId(params: Request["params"]){
@@ -129,4 +129,16 @@ export async function importWebsite(req: Request, res: Response){
         input,
     );
     res.status(201).json(source)
+};
+
+
+export async function importYoutube(req: Request, res: Response) {
+    const { workSpaceId } = workSpaceIdParamSchema.parse(req.params);
+    const input = importYoutubeSchema.parse(req.body);
+    const source = await importYoutubeSource(
+        workSpaceId,
+        req.session.user.id,
+        input,
+    );
+    res.status(201).json(source);
 }

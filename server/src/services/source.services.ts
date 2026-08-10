@@ -1,12 +1,13 @@
 import { userInfo } from "node:os";
 import { createSourceRecord, deleteSourceRecord, findSourceByIdAndWorkspaceId, findSourcesByworkspaceId, type SourceRecord } from "../repositories/source.repository.ts";
-import type { BulkDeleteSourceInput, CreateSourceInput, ImportWebsiteInput, ListSourceQuery } from "../validators/source.vlaidators.ts"
+import type { BulkDeleteSourceInput, CreateSourceInput, ImportWebsiteInput, ImportYouTubeInput, ListSourceQuery } from "../validators/source.vlaidators.ts"
 import { getWorkspaceByIdForUser } from "./workspace.services.ts"
 import { NotFoundError } from "../types/app-error.ts";
 import { removeSourceFromIndex } from "./source-processing.services.ts";
 import { scrapeWebsite } from "../lib/firecrawl.ts";
 import { uploadPdfToCloudinary } from "../lib/cloudinary.ts";
 import { extractPdfFromBuffer } from "../lib/pdf.ts";
+import { fetchYoutubeTranscript } from "../lib/youtube.ts";
 
 
 async function assertWorkspaceAccess(worksapceId: string, userId: string) {
@@ -17,10 +18,10 @@ export async function getSourceForWorkspace(
     workspaceId: string,
     sourceId: string,
     userId: string
-): Promise<SourceRecord>{
+): Promise<SourceRecord> {
     await getWorkspaceByIdForUser(workspaceId, userId);
-    const source =  await findSourceByIdAndWorkspaceId(sourceId, workspaceId);
-    if(!source){
+    const source = await findSourceByIdAndWorkspaceId(sourceId, workspaceId);
+    if (!source) {
         throw new NotFoundError("Source not found")
     };
     return source;
@@ -33,7 +34,7 @@ export async function deleteSourceForWorkspace(
     workspaceId: string,
     sourceId: string,
     userId: string
-){
+) {
     await getSourceForWorkspace(workspaceId, sourceId, userId);
     await removeSourceFromIndex(workspaceId, sourceId);
     await deleteSourceRecord(sourceId)
@@ -42,7 +43,7 @@ export async function deleteSourceForWorkspace(
 
 export async function createAndProcessSource(
     data: Parameters<typeof createSourceRecord>[0],
-){
+) {
     const source = await createSourceRecord(data);
 
     // await enqueueSourceProcessing({
@@ -82,9 +83,9 @@ export async function bulkDeleteSourcesForWorkspace(
     workspaceId: string,
     userId: string,
     sourceIds: string[]
-){
+) {
     await getWorkspaceByIdForUser(workspaceId, userId);
-    for(const sourceId of sourceIds){
+    for (const sourceId of sourceIds) {
         await deleteSourceForWorkspace(workspaceId, sourceId, userId)
     };
 };
@@ -95,7 +96,7 @@ export async function importWebsiteSource(
     workspaceId: string,
     userId: string,
     input: ImportWebsiteInput
-){
+) {
     await getWorkspaceByIdForUser(workspaceId, userId);
     const scraped = await scrapeWebsite(input.url)
 
@@ -119,36 +120,59 @@ export async function uploadPdfSource(
     file: Express.Multer.File,
     title?: string,
 ) {
-   await getWorkspaceByIdForUser(workspaceId, userId);
-   const upload = await uploadPdfToCloudinary(
-    file.buffer,
-    file.originalname
-   );
+    await getWorkspaceByIdForUser(workspaceId, userId);
+    const upload = await uploadPdfToCloudinary(
+        file.buffer,
+        file.originalname
+    );
 
-   let content: string | null = null;
-   let pageCount: number | undefined;
+    let content: string | null = null;
+    let pageCount: number | undefined;
 
-   try {
-        const extracted =  await extractPdfFromBuffer(file.buffer);
+    try {
+        const extracted = await extractPdfFromBuffer(file.buffer);
         content = extracted.text;
         pageCount = extracted.pageCount;
-   } catch (error) {
+    } catch (error) {
         console.error(error)
-   }
+    }
 
-   return createAndProcessSource({
-    workspaceId,
-    type: "PDF",
-    title: title?.trim() || file.originalname.replace(/\.pdf/i, ""),
-    content,
-    status: "PENDING", 
-    metadata: {
-        fileUrl: upload.secureUrl,
-        fileName: upload.originalFileName,
-        fileSize: upload.bytes,
-        publicId: upload.publicId,
-        resourceType: upload.resourceType,
-        pageCount
-    },
-   });
+    return createAndProcessSource({
+        workspaceId,
+        type: "PDF",
+        title: title?.trim() || file.originalname.replace(/\.pdf/i, ""),
+        content,
+        status: "PENDING",
+        metadata: {
+            fileUrl: upload.secureUrl,
+            fileName: upload.originalFileName,
+            fileSize: upload.bytes,
+            publicId: upload.publicId,
+            resourceType: upload.resourceType,
+            pageCount
+        },
+    });
 };
+
+
+export async function importYoutubeSource(
+    workspaceId: string,
+    userId: string,
+    input: ImportYouTubeInput,
+) {
+    await getWorkspaceByIdForUser(workspaceId, userId);
+
+    const transcript = await fetchYoutubeTranscript(input.url);
+
+    return createAndProcessSource({
+        workspaceId,
+        type: "YOUTUBE",
+        title: input.title || `YouTube: ${transcript.videoId}`,
+        content: transcript.content,
+        url: input.url,
+        status: "PENDING",
+        metadata: {
+            videoId: transcript.videoId,
+        },
+    });
+}
