@@ -1,3 +1,4 @@
+import { deleteWorkspaceVectors } from "../lib/pinecone.ts";
 import {
     findWorkspaceByUserId,
     findWorkspaceByIdAnaUserId,
@@ -40,5 +41,12 @@ export async function updateWorkspaceForUser(
 
 export async function deleteWorkSapceForUser(workspaceId: string, userId: string) {
     await getWorkspaceByIdForUser(workspaceId, userId)
+
+    try {
+        await deleteWorkspaceVectors(workspaceId);
+    } catch (error) {
+        console.error("failed to delete pinecone namespace", error);
+    }
+
     await deleteWorkspaceRecord(workspaceId)
 }

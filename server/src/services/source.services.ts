@@ -8,6 +8,7 @@ import { scrapeWebsite } from "../lib/firecrawl.ts";
 import { uploadPdfToCloudinary } from "../lib/cloudinary.ts";
 import { extractPdfFromBuffer } from "../lib/pdf.ts";
 import { fetchYoutubeTranscript } from "../lib/youtube.ts";
+import { enqueueSourceProcessing } from "../lib/source-envent.ts";
 
 
 async function assertWorkspaceAccess(worksapceId: string, userId: string) {
@@ -46,10 +47,10 @@ export async function createAndProcessSource(
 ) {
     const source = await createSourceRecord(data);
 
-    // await enqueueSourceProcessing({
-    //     sourceId: source.id,
-    //     workspaceId: source.workspaceId
-    // });
+    await enqueueSourceProcessing({
+        sourceId: source.id,
+        workspaceId: source.workspaceId
+    });
     return source;
 }
 
