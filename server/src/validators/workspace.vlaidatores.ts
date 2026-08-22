@@ -26,5 +26,5 @@ export type updateWorkSpaceSchemaInput = z
 
 
 export const workspaceIdParamSchema = z.object({
-    workSpaceId: z.string().trim().min(1),
+    workspaceId: z.string().trim().min(1),
 }) 

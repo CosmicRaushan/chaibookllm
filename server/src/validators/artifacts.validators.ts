@@ -10,7 +10,7 @@ export const artifactTypes = [
     "REPORT",
 ];
 
-export const artifactParamSchema = workspaceIdParamSchema.extend({
+export const artifactIdParamSchema = workspaceIdParamSchema.extend({
     artifactId: z.string().trim().min(1, "Artifact id is required"),
 });
 
