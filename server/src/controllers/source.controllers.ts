@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { workSpaceIdParamSchema } from "../validators/workspace.vlaidatores.ts";
+import { workspaceIdParamSchema } from "../validators/workspace.vlaidatores.ts";
 import { getZodFieldErrors } from "../utils/zod-error.ts";
 import { ValidationError } from "../types/app-error.ts";
 import { bulkDeleteSourceSchema, createSourceSchema, importWebSearchSchema, importYoutubeSchema, listSourceQuerySchema, sourceIdParamsSchema, workspaceIdParamsSchema } from "../validators/source.vlaidators.ts";
@@ -7,7 +7,7 @@ import { bulkDeleteSourcesForWorkspace, createTextOrMarkdownSource, deleteSource
 
 
 function parseWorkspaceId(params: Request["params"]){
-    const parsed = workSpaceIdParamSchema.safeParse(params);
+    const parsed = workspaceIdParamSchema.safeParse(params);
     if(!parsed.success){
         throw new ValidationError("Invalid workspace Id", getZodFieldErrors(parsed.error))
     }
@@ -102,7 +102,7 @@ export async function deleteSources(req: Request, res: Response) {
 
 
 export async function uploadPdf(req: Request, res: Response){
-    const {workSpaceId} = workSpaceIdParamSchema.parse(req.params);
+    const {workSpaceId} = workspaceIdParamSchema.parse(req.params);
 
     if(!req.file){
         throw new ValidationError("Pdf file is required")
@@ -120,7 +120,7 @@ export async function uploadPdf(req: Request, res: Response){
 };
 
 export async function importWebsite(req: Request, res: Response){
-    const {workSpaceId} = workSpaceIdParamSchema.parse(req.params);
+    const {workSpaceId} = workspaceIdParamSchema.parse(req.params);
     const input = importWebSearchSchema.parse(req.body)
     
     const source = await importWebsiteSource(
@@ -133,7 +133,7 @@ export async function importWebsite(req: Request, res: Response){
 
 
 export async function importYoutube(req: Request, res: Response) {
-    const { workSpaceId } = workSpaceIdParamSchema.parse(req.params);
+    const { workSpaceId } = workspaceIdParamSchema.parse(req.params);
     const input = importYoutubeSchema.parse(req.body);
     const source = await importYoutubeSource(
         workSpaceId,

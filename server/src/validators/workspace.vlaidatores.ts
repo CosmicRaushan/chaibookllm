@@ -25,6 +25,6 @@ export type updateWorkSpaceSchemaInput = z
     .infer<typeof updateWorkSpaceSchema>
 
 
-export const workSpaceIdParamSchema = z.object({
+export const workspaceIdParamSchema = z.object({
     workSpaceId: z.string().trim().min(1),
 }) 

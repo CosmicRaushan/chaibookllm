@@ -8,11 +8,11 @@ import {
 } from "../services/workspace.services.ts";
 
 import { ValidationError } from "../types/app-error.ts";
-import { createWorkspaceSchema, updateWorkSpaceSchema, workSpaceIdParamSchema } from "../validators/workspace.vlaidatores.ts";
+import { createWorkspaceSchema, updateWorkSpaceSchema, workspaceIdParamSchema } from "../validators/workspace.vlaidatores.ts";
 import { getZodFieldErrors } from "../utils/zod-error.ts";
 
 function parseWorkspaceId(params: Request['params']) {
-    const parsed = workSpaceIdParamSchema.safeParse(params);
+    const parsed = workspaceIdParamSchema.safeParse(params);
 
     if (!parsed.success) {
         throw new ValidationError("Invalid workspace id", getZodFieldErrors(parsed.error))

@@ -1,5 +1,6 @@
 import { findChunksBySourceId } from "../repositories/source.chunk.repository.ts";
 import { findSourceById } from "../repositories/source.repository.ts";
+import { summarizeConversationById } from "../services/conversation-memory.services.ts";
 import { chunkSourceContent, embedAndIndexSource, extractSourceContent, markSourceFailed, markSourceProcessing } from "../services/source-processing.services.ts";
 import {inngest} from "./client.ts";
 
@@ -52,20 +53,24 @@ export const processSource = inngest.createFunction(
     },
 );
 
-// export const generateArtifact = inngest.createFunction(
-//     {
-//         id: "generate-artifact",
-//         retries: 2,
-//         triggers: [{ event: "artifact/generate" }],
-//     },
-//     async ({ event, step }) => {
-//         const { artifactId } = event.data;
-
-//         await step.run("generate", () => processArtifactById(artifactId));
-
-//         return { artifactId, status: "READY" };
-//     },
-// );
 
 
-export const functions = [processSource];
+export const summarizeConversation = inngest.createFunction(
+    {
+        id: "summarize-conversation",
+        retries: 2,
+        triggers: [{ event: "conversation/summarize" }],
+    },
+    async ({ event, step }) => {
+        const { conversationId, userId } = event.data;
+
+        await step.run("summarize", () =>
+            summarizeConversationById(conversationId, userId),
+        );
+
+        return { conversationId, status: "SUMMARIZED" };
+    },
+);
+export const functions = [processSource, summarizeConversation];
+
+
